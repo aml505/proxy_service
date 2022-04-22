@@ -1,81 +1,53 @@
 import os
 import json
 import time
-import collections
-import concurrent
-import requests
-from concurrent.futures import ThreadPoolExecutor
-from paramiko import SSHClient, AutoAddPolicy
 from config.config import Config
 from query.query import Query
 from parser.parser import Parser
 from request.request import Request
 
-client = SSHClient()
-parser = Parser()
-deviceList = []
-query_dictionary = {}
-jsonDict = {}
-
-# list of commands that will be run for each node on network
-commandList = ['show runningconfiguration all | grep -A 11 -i metadata', 'show arp', 'show ip route', 'show acl table', 'show acl rule', 'show lldp table', 'show vlan config',
-               'vtysh -c "show interface"', 'show ip bgp neighbors']
-headerList = ['metadata', 'arp', 'ipRoute', 'aclTable', 'aclRule', 'lldp', 'vlan', 'interface', 'bgp']
-
 def loadSSH():
-    # load host ssh keys
-    client.load_host_keys(os.path.expanduser('~/.ssh/known_hosts'))
-    # known_hosts policy
-    client.set_missing_host_key_policy(AutoAddPolicy())
+    print("ssh keys LOAD")
 def collectData():
-    # read config file and foreach host create connection
-    for device in json.loads(cfg.conf_file_contents['TARGETS']['devices']):
-        client.connect(
-            device,
-            username=cfg.conf_file_contents['AUTH']['username'],
-            password=cfg.conf_file_contents['AUTH']['password'])
-        deviceList.append(device)
-        for i in commandList:
-            current_query = Query(device, i)
-            current_query.send_query(client)
-            query_dictionary[current_query.device + '.' + current_query.cmd] = current_query
-    client.close()
-
+    print("I collected data from devices")
 def jsonParse():
-    outputDict = {}
-    n = 0
-    # parsing data into JSON
-    for i in query_dictionary:
-        result = parser.parse_query_result(query_dictionary[i])
-        outputDict[headerList[n % len(headerList)]] = result
-        if ((n+1) % len(headerList)) == 0:
-            jsonDict[deviceList[int(n / len(headerList))]] = outputDict
-            outputDict = {}
-        n += 1
-    json_network = json.dumps(jsonDict)
-
-    # saving JSON output to a JSON file
-    jsonFile = open("data.json", "w+")
-    jsonFile.write(json_network)
-    jsonFile.close()
-
-def jsonSend():
-    filename = 'data.json'
-    # uploading JSON file to controller
+    print("I parsed the json file")
+def jsonSend(token):
+    """filename = 'data.json'
+    print("uploading JSON file to controller")
     current_request = Request()
-    current_request.postRequest(cfg.controller_url, filename)
+    url = cfg.controller_url + "/api/dt/running/state"
+    response = current_request.postRequestFile(url, token, filename)
+    return response"""
+def configNetwork():
+    print("configNetwork done")
+def controllerAuthentication():
+    current_request = Request()
+    data = {
+        'username': cfg.conf_file_contents['CONTROLLER_AUTH']['username'],
+        'password': cfg.conf_file_contents['CONTROLLER_AUTH']['password']
+    }
+    url = cfg.controller_url + "/api/login/user"
+    response = current_request.postRequestJson(url,data)
+    return response['token']
+
+
 
 if __name__ == '__main__':
     cfg = Config()
+    token = controllerAuthentication()
+    print(token)
     #load ssh keys and set up known_hosts
     loadSSH()
+    configNetwork()
     if(cfg.repeat_timer == None):
         collectData()
         jsonParse()
-        jsonSend()
+        jsonSend(token)
     else:
         while(True):
             collectData()
             jsonParse()
-            jsonSend()
+            print(jsonSend(token))
             time.sleep(int(cfg.repeat_timer))
+            
