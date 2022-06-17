@@ -1,3 +1,4 @@
+from asyncio.windows_events import NULL
 import requests
 
 class Request:
@@ -5,10 +6,13 @@ class Request:
         self.url = ""
         self.filename = ""
 
-    def postRequest(self, url, filename):
+    def postRequest(self, url, filename,token=""):
         filedata = {'filedata': (filename, open(filename, 'rb'))}
-        response = requests.post(url, files=filedata)
+        hed = {'Authorization': 'Bearer ' + token}
+        
+        response = requests.post(url, files=filedata,headers=hed)
+
         return response.text
     def postRequestJson(self,url,data):
         response = requests.post(url, json=data)
-        return response.json
+        return response

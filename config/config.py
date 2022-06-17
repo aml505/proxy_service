@@ -1,11 +1,13 @@
 import os
 import configparser
 
+
+
 class Config:
     def __init__(self):
-        self.repeat_timer = os.environ.get('REPEAT_TIMER')
-        self.controller_url = os.environ.get('CONTROLLER_URL')
-        self.conf_file_path = os.environ.get('CONF_FILE')
+        self.repeat_timer = os.environ.get('REPEAT_TIMER','10')
+        self.controller_url = os.environ.get('CONTROLLER_URL','http://127.0.0.1:8787')
+        self.conf_file_path = os.environ.get('CONF_FILE',"config/config.ini")
         self.conf_file_contents = self.read_config()
 
     def read_config(self):
